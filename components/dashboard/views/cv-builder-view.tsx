@@ -21,6 +21,7 @@ import {
   Users,
 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
+import { CVTemplate } from '@/components/cv-generator/cv-template'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -71,6 +72,7 @@ interface CvBuilderViewProps {
 
 export function CvBuilderView({ user }: CvBuilderViewProps) {
   const [section, setSection] = useState('personal')
+  const [selectedTemplate, setSelectedTemplate] = useState<'modern' | 'classic' | 'creative'>('modern')
 
   const [profile, setProfile] = useState(() => ({
     name: user?.name || '',
@@ -511,121 +513,92 @@ export function CvBuilderView({ user }: CvBuilderViewProps) {
 
         {/* Live preview */}
         <div className="lg:sticky lg:top-24 lg:self-start">
-          <div className="mb-2 flex items-center justify-between">
-            <p className="text-sm font-medium text-[#8B93A1]">Aperçu en direct</p>
-            <span className="cc-mono rounded-full bg-[#17B8A0]/10 px-2.5 py-1 text-[10px] font-medium text-[#17B8A0]">
-              Sauvegardé auto.
-            </span>
+          <div className="mb-3 flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-[#334155]">Aperçu en direct</p>
+              <p className="text-xs text-[#64748B]">Sélectionnez un modèle pour prévisualiser</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="cc-mono rounded-full bg-[#E6F6F1] px-2.5 py-1 text-[10px] font-medium text-[#0E766F]">Sauvegardé auto.</span>
+            </div>
           </div>
-          <Card className="overflow-hidden border-[#1E2530]/10">
-            <div className="h-2 w-full bg-[#0E1729]" />
-            <CardContent className="space-y-4 p-6">
-              <div className="flex items-start gap-4 border-b border-[#1E2530]/10 pb-4">
-                <div className="flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[#1E2530]/10 bg-[#1E2530]/[0.03]">
-                  {photo ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={photo} alt="Photo de profil" className="h-full w-full object-cover" />
-                  ) : (
-                    <User className="size-6 text-[#8B93A1]" />
-                  )}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <h2 className="cc-display truncate text-xl font-bold text-[#1E2530]">
-                    {profile.name || user?.name || 'Nom & Prénom'}
-                  </h2>
-                  <p className="text-sm font-medium text-[#17B8A0]">{profile.title || 'Intitulé du poste'}</p>
-                  <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-[#8B93A1]">
-                    <span className="inline-flex items-center gap-1">
-                      <Mail className="size-3" /> {profile.email || user?.email || 'email@example.com'}
-                    </span>
-                    <span className="inline-flex items-center gap-1">
-                      <Phone className="size-3" /> {profile.phone || '+216 -- --- ---'}
-                    </span>
-                    <span className="inline-flex items-center gap-1">
-                      <MapPin className="size-3" /> {profile.location || 'Adresse'}
-                    </span>
-                  </div>
-                </div>
-              </div>
 
-              <div>
-                <h3 className="cc-display text-xs font-semibold uppercase tracking-wider text-[#17B8A0]">Profil</h3>
-                <p className="mt-1 text-xs leading-relaxed text-[#1E2530]">
-                  {profile.summary || 'Votre résumé professionnel apparaîtra ici...'}
-                </p>
-              </div>
+          {/* Template selector */}
+          <div className="mb-3 grid grid-cols-3 gap-2">
+            <button
+              type="button"
+              onClick={() => setSelectedTemplate('modern')}
+              className={cn(
+                'rounded-lg border px-3 py-2 text-sm text-center',
+                selectedTemplate === 'modern'
+                  ? 'border-[#0F172A] bg-[#F8FAFC] text-[#0F172A]'
+                  : 'border-[#E6E9EE] bg-white text-[#334155] hover:bg-[#F8FAFC]'
+              )}
+            >
+              Modern Minimalist
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedTemplate('classic')}
+              className={cn(
+                'rounded-lg border px-3 py-2 text-sm text-center',
+                selectedTemplate === 'classic'
+                  ? 'border-[#0F172A] bg-[#F8FAFC] text-[#0F172A]'
+                  : 'border-[#E6E9EE] bg-white text-[#334155] hover:bg-[#F8FAFC]'
+              )}
+            >
+              Executive Classic
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedTemplate('creative')}
+              className={cn(
+                'rounded-lg border px-3 py-2 text-sm text-center',
+                selectedTemplate === 'creative'
+                  ? 'border-[#0F172A] bg-[#F8FAFC] text-[#0F172A]'
+                  : 'border-[#E6E9EE] bg-white text-[#334155] hover:bg-[#F8FAFC]'
+              )}
+            >
+              Creative Clean
+            </button>
+          </div>
 
-              <div>
-                <h3 className="cc-display text-xs font-semibold uppercase tracking-wider text-[#17B8A0]">
-                  Expérience
-                </h3>
-                <div className="mt-1.5 space-y-3">
-                  {experiences.map((exp) => (
-                    <div key={exp.id}>
-                      <div className="flex items-center justify-between">
-                        <p className="text-sm font-medium text-[#1E2530]">{exp.position || 'Intitulé du poste'}</p>
-                        <span className="text-xs text-[#8B93A1]">
-                          {exp.start || exp.end ? `${exp.start} — ${exp.end}` : 'Période'}
-                        </span>
-                      </div>
-                      <p className="text-xs text-[#8B93A1]">{exp.company || "Nom de l'entreprise"}</p>
-                      <p className="mt-1 text-xs italic text-[#8B93A1]">
-                        {exp.description || 'Description des missions...'}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <h3 className="cc-display text-xs font-semibold uppercase tracking-wider text-[#17B8A0]">
-                  Compétences
-                </h3>
-                <div className="mt-1.5 flex flex-wrap gap-1.5">
-                  {skills.length > 0 ? (
-                    skills.map((s) => (
-                      <span key={s} className="rounded-md bg-[#1E2530]/5 px-2 py-0.5 text-[0.7rem] text-[#1E2530]">
-                        {s}
-                      </span>
-                    ))
-                  ) : (
-                    <span className="text-xs italic text-[#8B93A1]">Vos compétences...</span>
-                  )}
-                </div>
-              </div>
-
-              <div>
-                <h3 className="cc-display text-xs font-semibold uppercase tracking-wider text-[#17B8A0]">
-                  Formation
-                </h3>
-                <div className="mt-1.5 space-y-2">
-                  {educations.map((ed) => (
-                    <div key={ed.id}>
-                      <div className="flex items-center justify-between">
-                        <p className="text-sm font-medium text-[#1E2530]">{ed.degree || 'Diplôme obtenu'}</p>
-                        <span className="text-xs text-[#8B93A1]">{ed.year || 'Année'}</span>
-                      </div>
-                      <p className="text-xs text-[#8B93A1]">{ed.school || 'Établissement / Université'}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <h3 className="cc-display text-xs font-semibold uppercase tracking-wider text-[#17B8A0]">Langues</h3>
-                <p className="mt-1 text-xs text-[#1E2530]">
-                  {profile.languages || <span className="text-xs italic text-[#8B93A1]">Vos langues...</span>}
-                </p>
-              </div>
-
-              <div>
-                <h3 className="cc-display text-xs font-semibold uppercase tracking-wider text-[#17B8A0]">
-                  Centres d&apos;intérêt
-                </h3>
-                <p className="mt-1 text-xs text-[#1E2530]">
-                  {profile.interests || <span className="text-xs italic text-[#8B93A1]">Vos centres d'intérêt...</span>}
-                </p>
-              </div>
+          <Card className="overflow-hidden border-[#E6E9EE] shadow-sm">
+            <CardContent className="space-y-4 p-4">
+              {/* Build cvData from current form state (data-only, no placeholders) */}
+              <CVTemplate
+                cvData={{
+                  personal: {
+                    name: profile.name || '',
+                    title: profile.title || '',
+                    email: profile.email || '',
+                    phone: profile.phone || '',
+                    location: profile.location || '',
+                    summary: profile.summary || '',
+                    photo: photo || undefined,
+                  },
+                  template: selectedTemplate,
+                  experiences: experiences.map((e) => ({
+                    id: e.id,
+                    position: e.position || '',
+                    company: e.company || '',
+                    startDate: e.start || '',
+                    endDate: e.end || '',
+                    description: e.description || '',
+                  })),
+                  education: educations.map((ed) => ({
+                    id: ed.id,
+                    degree: ed.degree || '',
+                    school: ed.school || '',
+                    year: ed.year || '',
+                    mention: ed.grade || '',
+                  })),
+                  skills: skills || [],
+                  languages: profile.languages ? profile.languages.split(',').map((l) => l.trim()) : [],
+                  interests: profile.interests ? profile.interests.split(',').map((i) => i.trim()) : [],
+                }}
+                selectedTemplate={selectedTemplate}
+              />
             </CardContent>
           </Card>
         </div>
@@ -688,6 +661,7 @@ export function CvBuilderView({ user }: CvBuilderViewProps) {
                     skills,
                     experiences,
                     educations,
+                    selectedTemplate,
                   }
                   return <AIGeneratorButton disabled={!isFormComplete} profileData={profilePayload} />
                 })()}
