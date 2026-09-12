@@ -4,39 +4,63 @@ import { useState } from 'react'
 import { ImagePlus, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
+export interface UploadedFileData {
+  name: string
+  file: File
+}
+
 interface UploadZoneProps {
   label?: string
   files?: string[]
   onFilesChange?: (files: string[]) => void
+  fileData?: UploadedFileData[]
+  onFileDataChange?: (files: UploadedFileData[]) => void
 }
 
 export function UploadZone({
   label = 'Glissez-déposez vos images ici',
   files: externalFiles,
   onFilesChange,
+  fileData: externalFileData,
+  onFileDataChange,
 }: UploadZoneProps) {
   const [dragging, setDragging] = useState(false)
   const [internalFiles, setInternalFiles] = useState<string[]>([])
+  const [internalFileData, setInternalFileData] = useState<UploadedFileData[]>([])
 
   // Utiliser les fichiers externes s'ils sont fournis, sinon l'état interne (vide par défaut)
   const files = externalFiles !== undefined ? externalFiles : internalFiles
+  const fileData = externalFileData !== undefined ? externalFileData : internalFileData
 
-  function updateFiles(newFiles: string[]) {
+  function updateFiles(newFiles: string[], newFileData: UploadedFileData[]) {
     if (onFilesChange) {
       onFilesChange(newFiles)
     } else {
       setInternalFiles(newFiles)
     }
+
+    if (onFileDataChange) {
+      onFileDataChange(newFileData)
+    } else if (externalFileData === undefined) {
+      setInternalFileData(newFileData)
+    }
   }
 
   function addFiles(list: FileList | null) {
     if (!list) return
-    const newNames = Array.from(list).map((f) => f.name)
-    updateFiles([...files, ...newNames])
+    const incoming = Array.from(list)
+    const newFileData = incoming.map((file) => ({ name: file.name, file }))
+    updateFiles(
+      [...files, ...newFileData.map((item) => item.name)],
+      [...fileData, ...newFileData],
+    )
   }
 
   function removeFile(index: number) {
-    updateFiles(files.filter((_, idx) => idx !== index))
+    updateFiles(
+      files.filter((_, idx) => idx !== index),
+      fileData.filter((_, idx) => idx !== index),
+    )
   }
 
   return (

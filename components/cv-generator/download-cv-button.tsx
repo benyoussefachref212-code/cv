@@ -1,167 +1,245 @@
 'use client'
 
-import { useState } from 'react'
 import { Download, Loader2 } from 'lucide-react'
+import { useState } from 'react'
 import { CVData } from '@/hooks/useAICVGenerator'
-import jsPDF from 'jspdf'
-import html2canvas from 'html2canvas'
 
 interface DownloadCVButtonProps {
-  cvData: CVData
+  cvData: CVData & { template?: string }
+  className?: string
 }
 
-export function DownloadCVButton({ cvData }: DownloadCVButtonProps) {
-  const [isDownloading, setIsDownloading] = useState(false)
+export function DownloadCVButton({ cvData, className }: DownloadCVButtonProps) {
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  const downloadCVAsPDF = async () => {
-    setIsDownloading(true)
+  const handleDownload = async () => {
+    setIsGenerating(true)
+    setError(null)
 
     try {
-      const element = document.getElementById('cv-content')
-      if (!element) return
-
-      // Apply template-specific adjustments before capture by injecting a temporary stylesheet
-      const template = (cvData as any).template || (cvData as any).selectedTemplate || 'modern'
-      const styleId = 'tmp-cv-template-style'
-      // remove any existing temporary style
-      const prev = document.getElementById(styleId)
-      if (prev) prev.remove()
-
-      // Inject local webfont @font-face and template CSS (expects fonts in /public/fonts)
-      const css = `
-        @font-face {
-          font-family: 'MerriweatherLocal';
-          src: url('/fonts/Merriweather-Regular.woff2') format('woff2');
-          font-weight: 400;
-          font-style: normal;
-          font-display: swap;
-        }
-        @font-face {
-          font-family: 'MerriweatherLocal';
-          src: url('/fonts/Merriweather-Bold.woff2') format('woff2');
-          font-weight: 700;
-          font-style: normal;
-          font-display: swap;
-        }
-
-        #cv-content[data-template="classic"] { font-family: 'MerriweatherLocal', Georgia, serif !important; }
-        #cv-content[data-template="classic"] .h-1 { background: #0E1729 !important; }
-        #cv-content[data-template="classic"] .md\\:col-span-1 { background: #ffffff !important; color: #0E1729 !important; border-right: 1px solid #E6E9EE !important; }
-        #cv-content[data-template="classic"] .rounded-full { box-shadow: 0 6px 18px rgba(14,23,41,0.08) !important; }
-
-        #cv-content[data-template="creative"] { font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial !important; }
-        #cv-content[data-template="creative"] .h-1 { background: linear-gradient(90deg,#ec4899,#f59e0b) !important; }
-        #cv-content[data-template="creative"] .md\\:col-span-1 { background: linear-gradient(180deg,#fff1f2,#fffbeb) !important; color: #7F1D1D !important; }
-        #cv-content[data-template="creative"] .rounded-full { box-shadow: 0 10px 30px rgba(236,72,153,0.12) !important; }
-
-        /* Modern default accent */
-        #cv-content[data-template="modern"] .h-1 { background: linear-gradient(90deg,#0E1729,#17B8A0,#0E1729) !important; }
-        #cv-content[data-template="modern"] .md\\:col-span-1 { background: linear-gradient(180deg,#0E1729,#0E1729/95) !important; }
-      `
-
-      const styleEl = document.createElement('style')
-      styleEl.id = styleId
-      styleEl.appendChild(document.createTextNode(css))
-      document.head.appendChild(styleEl)
-
-      // mark the element with the template so CSS rules apply
-      element.setAttribute('data-template', template)
-
-      // Capture le CV en image haute qualité
-      const canvas = await html2canvas(element, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        backgroundColor: '#ffffff',
-      })
-
-      const imgData = canvas.toDataURL('image/png')
-      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
-
-      // page layout and margins
-      const pageWidth = 210
-      const pageHeight = 297
-      const marginLeft = 15
-      const marginRight = 15
-      const marginTop = 20
-      const marginBottom = 20
-      const headerHeight = 12
-      const usableWidth = pageWidth - marginLeft - marginRight
-      const usableHeight = pageHeight - marginTop - marginBottom - headerHeight
-
-      // slice the canvas into page-sized chunks to preserve quality and layout
-      const ratio = usableWidth / canvas.width
-      const srcChunkHeight = Math.floor(usableHeight / ratio) // in source pixels
-      const pageCount = Math.ceil(canvas.height / srcChunkHeight)
-
-      const safeName = cvData.personal.name ? cvData.personal.name.replace(/\s+/g, '_') : 'CV'
-      const filename = `CV_${safeName}_${template}.pdf`
-
-      for (let i = 0; i < pageCount; i++) {
-        const sY = i * srcChunkHeight
-        const chunkHeight = i === pageCount - 1 ? canvas.height - sY : srcChunkHeight
-
-        const pageCanvas = document.createElement('canvas')
-        pageCanvas.width = canvas.width
-        pageCanvas.height = chunkHeight
-        const ctx = pageCanvas.getContext('2d')
-        if (ctx) {
-          ctx.drawImage(canvas, 0, sY, canvas.width, chunkHeight, 0, 0, canvas.width, chunkHeight)
-        }
-
-        const pageImgData = pageCanvas.toDataURL('image/png')
-        const pageImgHeight = (chunkHeight * ratio)
-
-        if (i > 0) pdf.addPage()
-
-        // draw header
-        pdf.setFillColor(255, 255, 255)
-        pdf.rect(0, 0, pageWidth, marginTop + headerHeight, 'F')
-        pdf.setFontSize(10)
-        pdf.setTextColor(14, 23, 41)
-        pdf.text(`${cvData.personal.name || ''}`, marginLeft, marginTop - 6 + headerHeight / 2)
-        pdf.text(template.charAt(0).toUpperCase() + template.slice(1), pageWidth - marginRight, marginTop - 6 + headerHeight / 2, { align: 'right' })
-
-        pdf.addImage(pageImgData, 'PNG', marginLeft, marginTop + headerHeight, usableWidth, pageImgHeight)
-
-        // footer: page number and small footer text
-        const footerY = pageHeight - marginBottom / 2
-        pdf.setFontSize(9)
-        pdf.setTextColor(100)
-        pdf.text(`Page ${i + 1} / ${pageCount}`, pageWidth / 2, footerY, { align: 'center' })
-        pdf.text('Career Craft', marginLeft, footerY)
+      // Find the CV content element
+      const cvElement = document.getElementById('cv-content')
+      if (!cvElement) {
+        throw new Error('Contenu du CV introuvable. Veuillez réessayer.')
       }
 
-      // Télécharge le PDF
-      pdf.save(filename)
-      // cleanup injected styles/attributes and font link
-      element.removeAttribute('data-template')
-      const tmp = document.getElementById(styleId)
-      if (tmp) tmp.remove()
-      // no font link to remove when using embedded @font-face
-    } catch (error) {
-      console.error('Erreur lors du téléchargement du PDF:', error)
-      alert('Une erreur est survenue lors du téléchargement. Veuillez réessayer.')
+      // Get the template name for the filename
+      const name = cvData.personal?.name?.trim() || 'curriculum-vitae'
+      const fileName = `CV_${name.replace(/\s+/g, '_')}.pdf`
+
+      // Make sure custom fonts are actually loaded before we rasterize,
+      // otherwise the first export can render with fallback fonts / shifted layout
+      if (typeof document !== 'undefined' && 'fonts' in document) {
+        try {
+          await document.fonts.ready
+        } catch {
+          // ignore font-loading errors, proceed with capture anyway
+        }
+      }
+
+      // Clone the element to avoid modifying the original
+      const clone = cvElement.cloneNode(true) as HTMLElement
+
+      // Remove selection indicators for export
+      clone.setAttribute('data-export', 'true')
+
+      // Remove all interactive classes and attributes
+      clone.querySelectorAll('.cv-selectable, .cv-selected, .cv-footer').forEach((el) => {
+        el.classList.remove('cv-selectable', 'cv-selected')
+        el.removeAttribute('data-tooltip')
+      })
+
+      clone.querySelectorAll('[data-tooltip]').forEach((el) => {
+        el.removeAttribute('data-tooltip')
+      })
+
+      // Safety net: strip any modern CSS color functions from *inline* styles.
+      // html2canvas-pro (used below) already understands oklch/oklab/lab/lch,
+      // so this is just a belt-and-braces cleanup for edge cases / inline styles
+      // that slipped through, not the primary fix.
+      const PROBLEMATIC_COLOR_FN = /(lab\(|lch\(|oklab\(|oklch\(|color-mix\()/i
+      const allElements = clone.querySelectorAll('*')
+      allElements.forEach((el) => {
+        const htmlEl = el as HTMLElement
+        const style = htmlEl.style
+
+        const propNames: string[] = []
+        for (let i = 0; i < style.length; i++) {
+          propNames.push(style[i])
+        }
+
+        for (const prop of propNames) {
+          const value = style.getPropertyValue(prop)
+          if (value && PROBLEMATIC_COLOR_FN.test(value)) {
+            style.setProperty(prop, '')
+          }
+        }
+
+        const styleText = style.cssText || ''
+        if (PROBLEMATIC_COLOR_FN.test(styleText)) {
+          const safeStyles: Record<string, string> = {}
+          const safeProps = [
+            'color', 'background', 'background-color', 'background-image',
+            'font-size', 'font-weight', 'font-family', 'font-style',
+            'width', 'height', 'padding', 'margin', 'border', 'border-color',
+            'display', 'flex', 'grid', 'gap', 'position', 'top', 'left', 'right', 'bottom',
+            'transform', 'opacity', 'z-index', 'overflow', 'text-align', 'text-decoration',
+            'letter-spacing', 'line-height', 'text-transform', 'border-radius',
+            'box-shadow', 'outline', 'grid-template-columns', 'align-items', 'justify-content'
+          ]
+
+          for (const prop of safeProps) {
+            const value = style.getPropertyValue(prop)
+            if (value && !PROBLEMATIC_COLOR_FN.test(value)) {
+              safeStyles[prop] = value
+            }
+          }
+
+          style.cssText = ''
+          for (const [prop, value] of Object.entries(safeStyles)) {
+            if (value) {
+              style.setProperty(prop, value)
+            }
+          }
+        }
+      })
+
+      // Hide selection indicators during export
+      const styleTag = document.createElement('style')
+      styleTag.textContent = `
+        .cv-selectable { cursor: default !important; outline: none !important; }
+        .cv-selectable::after { display: none !important; }
+        .cv-selected { outline: none !important; }
+        .cv-footer { display: none !important; }
+        #cv-content[data-export="true"] .cv-selectable::after { display: none !important; }
+        #cv-content[data-export="true"] .cv-selected { outline: none !important; }
+      `
+      clone.appendChild(styleTag)
+
+      // Create a temporary container for rendering (A4 width @ 96dpi)
+      const container = document.createElement('div')
+      container.style.position = 'fixed'
+      container.style.left = '-9999px'
+      container.style.top = '0'
+      container.style.width = '794px'
+      container.style.background = '#ffffff'
+      container.style.padding = '0'
+      container.style.overflow = 'hidden'
+      container.style.zIndex = '-1'
+      container.appendChild(clone)
+      document.body.appendChild(container)
+
+      // Wait for images to load
+      const images = clone.querySelectorAll('img')
+      await Promise.all(
+        Array.from(images).map(
+          (img) =>
+            new Promise<void>((resolve) => {
+              if (img.complete) {
+                resolve()
+              } else {
+                img.onload = () => resolve()
+                img.onerror = () => resolve()
+              }
+            })
+        )
+      )
+
+      // html2canvas-pro is a drop-in replacement for html2canvas that natively
+      // supports modern CSS color functions (oklch, oklab, lab, lch, color-mix),
+      // which is what Tailwind's default palette compiles to. Using the regular
+      // html2canvas package here would throw on those colors.
+      const html2canvas = (await import('html2canvas-pro')).default
+      const jsPDF = (await import('jspdf')).default
+
+      // Render the CV to canvas
+      const canvas = await html2canvas(container, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        logging: false,
+        backgroundColor: '#ffffff',
+        width: 794,
+        height: container.scrollHeight,
+        windowWidth: 794,
+        onclone: (clonedDoc) => {
+          const clonedEl = clonedDoc.getElementById('cv-content')
+          if (clonedEl) {
+            clonedEl.style.transform = 'none'
+          }
+        },
+      })
+
+      document.body.removeChild(container)
+
+      // Create PDF
+      const imgData = canvas.toDataURL('image/png')
+      const pdf = new jsPDF('p', 'mm', 'a4')
+      const pdfWidth = pdf.internal.pageSize.getWidth()
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width
+      const pageHeight = pdf.internal.pageSize.getHeight()
+
+      let heightLeft = pdfHeight
+      let position = 0
+
+      // Add first page
+      pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight)
+      heightLeft -= pageHeight
+      position -= pageHeight
+
+      // Add additional pages if needed
+      while (heightLeft > 0) {
+        pdf.addPage()
+        const yOffset = position * -1
+        pdf.addImage(imgData, 'PNG', 0, yOffset, pdfWidth, pdfHeight)
+        heightLeft -= pageHeight
+        position -= pageHeight
+      }
+
+      // Save the PDF
+      pdf.save(fileName)
+    } catch (err) {
+      console.error('PDF generation failed:', err)
+      setError(
+        err instanceof Error
+          ? `Erreur: ${err.message}`
+          : 'Une erreur est survenue lors de la génération du PDF. Veuillez réessayer.'
+      )
     } finally {
-      setIsDownloading(false)
+      setIsGenerating(false)
     }
   }
 
   return (
-    <button
-      onClick={downloadCVAsPDF}
-      disabled={isDownloading}
-      className="inline-flex items-center gap-2 rounded-lg bg-[#17B8A0] px-4 py-2 text-sm font-medium text-white transition-all hover:bg-[#17B8A0]/90 disabled:cursor-not-allowed disabled:opacity-50"
-    >
-      {isDownloading ? (
-        <>
-          <Loader2 className="size-4 animate-spin" /> Téléchargement...
-        </>
-      ) : (
-        <>
-          <Download className="size-4" /> Télécharger en PDF
-        </>
+    <div className="flex flex-col items-end gap-1">
+      <button
+        onClick={handleDownload}
+        disabled={isGenerating}
+        className={cn(
+          'inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 px-4 py-2 text-sm font-medium text-white shadow-lg shadow-emerald-500/25 transition-all hover:shadow-emerald-500/40 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed',
+          className
+        )}
+      >
+        {isGenerating ? (
+          <>
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Génération...
+          </>
+        ) : (
+          <>
+            <Download className="h-4 w-4" />
+            Télécharger PDF
+          </>
+        )}
+      </button>
+      {error && (
+        <span className="text-xs text-red-500 max-w-[220px] text-right">{error}</span>
       )}
-    </button>
+    </div>
   )
+}
+
+function cn(...classes: (string | boolean | undefined | null)[]) {
+  return classes.filter(Boolean).join(' ')
 }

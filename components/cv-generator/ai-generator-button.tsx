@@ -22,6 +22,7 @@ interface AIGeneratorButtonProps {
     experiences?: Experience[]
     educations?: Education[]
     selectedTemplate?: string
+    sidebarColor?: 'navy' | 'charcoal' | 'forest' | 'purple'
   }
   disabled?: boolean
   onCVGenerated?: () => void
