@@ -912,11 +912,11 @@ export function CvBuilderView({ user }: CvBuilderViewProps) {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50/80">
-      <header className="sticky top-0 z-50 border-b border-slate-200/60 bg-white/80 backdrop-blur-xl">
+    <div className="min-h-screen bg-[#f5f7f8] text-slate-900">
+      <header className="sticky top-0 z-50 border-b border-slate-200/80 bg-[#f5f7f8]/90 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 shadow-lg shadow-emerald-500/20">
+            <div className="flex size-10 items-center justify-center rounded-2xl bg-slate-950 shadow-lg shadow-slate-950/15">
               <FileText className="h-5 w-5 text-white" />
             </div>
             <div>
@@ -955,8 +955,8 @@ export function CvBuilderView({ user }: CvBuilderViewProps) {
         </div>
       </header>
 
-      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[380px_1fr] xl:grid-cols-[420px_1fr]">
+      <main className="mx-auto max-w-[1440px] px-4 py-6 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(360px,420px)_minmax(0,1fr)] xl:gap-8">
           {/* LEFT COLUMN - EDITOR */}
           <div className="space-y-5">
             <div className="rounded-2xl border border-slate-200/60 bg-white p-2 shadow-sm">
@@ -1502,7 +1502,7 @@ export function CvBuilderView({ user }: CvBuilderViewProps) {
           </div>
 
           {/* RIGHT COLUMN - PREVIEW */}
-          <div className="space-y-5">
+          <div className="space-y-5 lg:sticky lg:top-24">
             <div className="rounded-2xl border border-slate-200/60 bg-white p-4 shadow-sm">
               <div className="mb-4 flex items-center justify-between">
                 <div className="flex items-center gap-2">
